@@ -12,7 +12,7 @@ This dashboard makes it easy to manipulate patient info with sequencing data of 
 * `pangolin_lineage` : name of the clade. According to Pangolin nomenclature (https://pangolin.cog-uk.io/)
 * `qc.overallStatus` : QC evaluation of sequence. Any alphanumeric string.
 * `date_prel` : date of sampling (DD/MM/YYY)
-* `DDN` : date of birth (YYY)
+* `DDN` : date of birth (YYYY)
 * `UH` : Origin of the patient. Any alphanumeric string.
 * `nb_labo` : Patient codification. Any alphanumeric string.
 * `sexe` : Gender. Any alphanumeric string.
