@@ -2,6 +2,7 @@
 ## Author: Sandrine Imbeaud
 ## Contact: sandrine.imbeaud@inserm.fr
 ## FUNctional GEnomics of Solid Tumors - FunGeST
+## INSERM U1138, EQ28
 ## Centre de Recherche des Cordeliers, 15 rue de l'Ecole de Médecine, 75006 Paris
 ## http://zucmanlab.com/our-lab-fungest/
 
@@ -64,7 +65,18 @@ titlePanel("COVID datasets"),
       
        selectInput("series", "Choose Annotation:", choices=c()),
                 conditionalPanel(condition = "input.series == 'Check variants'",
-                      selectInput(inputId = "variantlist",label = "Select your Variants :", choices = c(), width="80%", multiple = TRUE)),
+                                 selectInput(inputId = "variantlist",label = "Select your Variants :", 
+                                             choices = c(), width="80%", multiple = TRUE), 
+                                 awesomeRadio(
+                                   inputId = "modevariants",
+                                   label = "Mode of selection", 
+                                   choices = c("OR", "AND"),
+                                   selected = "AND",
+                                   inline = TRUE, 
+                                   checkbox = TRUE
+                                 ),
+                                 tags$hr()
+                      ),
        fileInput("file2", width='80%', 
                  label="Input your tree formatted file",accept=c(".newick")),
      
@@ -137,7 +149,7 @@ titlePanel("COVID datasets"),
                             h4("Sources"),
                             h5("PharmD PhD David Veyer"),
                             h5("PharmD PhD Hélène Péré"),
-                            h5("Nicolas Robillard"),
+                            h5("MD Nicolas Robillard"),
                             h5("Unité de Virologie, Service de Microbiologie @, HEGP, Paris, France"),
                             tags$br(),
                             h5("MD Maxime Wack"),
@@ -237,7 +249,10 @@ observe({
      input$subset_CoV
    }) 
    
-
+   my_mode<- reactive({
+     input$modevariants
+   }) 
+   
    my_submit_dta <- reactiveVal()
    gg.tree= reactiveVal()
    
@@ -382,15 +397,34 @@ observe({output$p.tree <- renderPlot({
   
   if(my_Idwithvariant() == TRUE) {
   if (my_series() == "Check variants") {
-    mut=paste(my_variantlist(), collapse = "|")
-    #print(mut)
-    annot= data1() %>%
-      dplyr::rename(seq=name) %>%
-      as.data.frame() %>%
-      mutate(cat = ifelse(grepl(mut, aaSubstitutions), "yes",
+     if (my_mode()=="OR") {
+       mut=paste(my_variantlist(), collapse = "|")
+       #print(mut)
+       
+       annot= data1() %>%
+         dplyr::rename(seq=name) %>%
+         as.data.frame() %>%
+         mutate(cat = ifelse(grepl(mut, aaSubstitutions), "yes",
                           ifelse(grepl(mut, aaDeletions), "yes","no"))) %>%
-      select(seq, cat)
-      colnames(annot)=c("seq","cat")}
+         select(seq, cat)
+       colnames(annot)=c("seq","cat")}
+    
+    if (my_mode()=="AND") {
+      df=data1() %>% 
+        tidyr::unite("z", aaSubstitutions:aaDeletions, sep=",", remove = FALSE, na.rm=TRUE) %>%
+        select(name, z) %>%
+        rowwise() %>% 
+        filter(all(sapply(my_variantlist(), function(pat) grepl(pat, z))))
+       my_name=df$name
+      
+       annot= data1() %>%
+         dplyr::rename(seq=name) %>%
+         as.data.frame() %>%
+         mutate(cat = ifelse(seq %in% my_name, "yes","no")) %>%
+         select(seq, cat)
+       colnames(annot)=c("seq","cat")}
+    
+    }
   
   if (my_series() != "Check variants") {
     
