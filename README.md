@@ -24,6 +24,35 @@ __then add in column the annotations you are interested in testing__
 `2]. tree `: __Alignment tree.newick__
 
 
+## Packages needed
+
+The application was built on R version 4.0.2.
+
+The following dependencies are required:
+`shiny` (v1.6.0)
+`shinyWidgets` (v0.6.0)
+`shinyjs` (v2.0.0)
+`tidyverse` (v1.3.0)
+`knitr` (v1.3.1)
+`ggtree` (v2.0.0 not +)
+`tidytree` (v0.3.3)
+`treeio` (v1.10.0 or +)
+`ggplot2` (v3.3.3)
+`g3viz` (v1.1.3 or +)
+`janitor`(v2.1.0)
+`lubridate` (v1.7.10)
+`rcartocolor` (v2.0.0)
+`ggtext` (v0.1.1)
+`shadowtext` (v0.0.7)
+`forcats` (v0.5.1)
+`dplyr` (v1.0.3 or +)
+`plotly` (v4.9.3)
+
+The tested versions are indicated in brackets
+
+Note: You only need to install those packages once (or not at all, if all these packages are already on your system).
+
+
 ## Starting the app
 
 Click "Clone or download" -> "Download ZIP". Find the zip file (typically in your Downloads folder) and extract it to a desired location. Open the app.R file in RStudio and click "Run app".
