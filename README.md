@@ -50,6 +50,8 @@ The following dependencies are required:
 
 The tested versions are indicated in brackets
 
+Run the `install.R` script to install the required packages in the specific versions for `ggtree` and `treeio`.
+
 Note: You only need to install those packages once (or not at all, if all these packages are already on your system).
 
 
