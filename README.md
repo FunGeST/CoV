@@ -4,7 +4,7 @@ This dashboard makes it easy to manipulate patient info with sequencing data of 
 
 ## Input files
 
-`1]. annotation `: __Table with your annotation__ 
+`1]. annotation `: __Table with your annotation__
 (the header is required, but the order of the columns can change)
 * `name` : name of the sequence. Any alphanumeric string. Should refer to name used in alignment tree newick file
 * `virus` : name of the virus. Any alphanumeric string. Default="sars_cov_2
@@ -63,10 +63,10 @@ Click "Clone or download" -> "Download ZIP". Find the zip file (typically in you
 
 * [Wack Maxime](https://github.com/maximewack), MD, Département d'Informatique Médicale, Biostatistiques et Santé Publique @, HEGP, Paris, France
 
-* __Veyer David__, PharmaD, PhD,  INSERM UMRS1138, Centre de Recherches des Cordeliers - Sorbonne Université-Inserm-Université de Paris, Paris, France 
+* __Veyer David__, PharmaD, PhD,  INSERM UMRS1138, Centre de Recherches des Cordeliers - Sorbonne Université-Inserm-Université de Paris, Paris, France
                                   Unité de Virologie, Service de Microbiologie, HEGP, Paris, France
-                                  
-* __Péré Hélène__, PharmaD, PhD,  INSERM UMRS1138, Centre de Recherches des Cordeliers - Sorbonne Université-Inserm-Université de Paris, Paris, France 
+
+* __Péré Hélène__, PharmaD, PhD,  INSERM UMRS1138, Centre de Recherches des Cordeliers - Sorbonne Université-Inserm-Université de Paris, Paris, France
                                   Unité de Virologie, Service de Microbiologie, HEGP, Paris, France
 
 
@@ -79,3 +79,5 @@ CoV is a free software: you can redistribute it and/or modify it under the terms
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+![](https://github.com/FunGeST/CoV/blob/main/IDDN%20Certificate_21135-3.png)
