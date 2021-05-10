@@ -46,7 +46,7 @@ titlePanel("COVID datasets"),
                    status = "success",
                    value = TRUE,
                    fill = TRUE),
-
+      
       ## Input: Select a file ----
        fileInput("file1", "Input your annotation file", multiple = FALSE,
                  accept = c(".txt",".csv"),
@@ -68,7 +68,7 @@ titlePanel("COVID datasets"),
                                  tags$hr()
                       ),
        fileInput("file2", width='80%',
-                 label="Input your tree formatted file",accept=c(".newick")),
+                 label="Input your tree formatted file",accept=c(".newick", ".nw")),
 
        knobInput(
          inputId = "height",
@@ -117,14 +117,40 @@ titlePanel("COVID datasets"),
                   tabPanel("annot",
                            fluidRow(
                              column(12,
-                                    div(style="display:inline-block; float:right",downloadButton('downloadtosubmit',"Download to submit GISAID")),
-                                    div(style="display:inline-block; float:right",downloadButton('download',"Download the data")),
+                                        div(style="display:inline-block; float:right",downloadButton('download',"Download the data")),
                                     dataTableOutput("my_table")))),
                   tabPanel("variants",
                            fluidRow(
                              column(12,
                                     downloadButton('download2',"Download the data"),
                                     dataTableOutput("my_variants")))),
+                  tabPanel("GISAID", 
+                           wellPanel(
+                             radioButtons(inputId = "submit", "Submit to GISAID", c("yes", "no"), selected = "no", inline = TRUE)
+                           ),
+                           conditionalPanel(condition = "input.submit == 'no'"),
+                           conditionalPanel(condition = "input.submit == 'yes'",                 
+                                    div(style="display:inline-block; float:right",downloadButton('downloadtosubmit',"Download to submit GISAID")),
+                                    div(style = "font-size: 12px",textInput("Submitter", "Type Submitter name", value = "")),
+                                    div(style = "font-size: 12px",textInput("Location", "Type Location (Continent/Country/Region/City)", value = "Europe / France / Ile-de-France / Paris")),
+                                    div(style = "font-size: 12px",textInput("SubLab", "Type Submitting lab", value = "")),
+                                    div(style = "font-size: 12px",textInput("SubAddress", "Type Submitting Address lab", value = "")),
+                                    div(style = "font-size: 12px",textInput("Authors", "Type list of Authors", value = "")),
+                                    tags$br(),
+                                    div(style = "font-size: 12px",textInput("Type", "Type of virus", value = "betacoronavirus")),
+                                    div(style = "font-size: 12px",textInput("Host", "Specify Host", value = "Human")),
+                                    div(style = "font-size: 12px",textInput("Fasta", "Type FASTA filename", value = "all_sequences.fasta")),
+                                    tags$br(),
+                                    div(style = "font-size: 12px",selectInput("Lab", "Select column that describes Originating lab", choices=c(),  multiple = FALSE)),
+                                    div(style = "font-size: 12px",selectInput("Address", "Select column that describes Address lab", choices=c(),  multiple = FALSE)),
+                                    div(style = "font-size: 12px",textInput("Prefix", "Type common prefix for all sequences", value = "hCoV-19/France")),
+                                    div(style = "font-size: 12px",selectInput("Suffix", "Select column that describes sequence name", choices=c(), selected="name", multiple = FALSE)),
+                                    div(style = "font-size: 12px",selectInput("Status", "Select column that describes Patient status", choices=c(),  multiple = FALSE)),
+                                    div(style = "font-size: 12px",textInput("Passage", "Type Passage details/history", value = "Original")),
+                                    div(style = "font-size: 12px",textInput("Seq", "Specify Sequencing technology", value = "Illumina Miseq")),
+                                    div(style = "font-size: 12px",textInput("Assembly", "Specify Assembly method", value = "Geneious Prime 2021.0.3")),
+                                    div(style = "font-size: 12px",textInput("Coverage", "Specify coverage", value = "")),
+                                    )),
                   tabPanel("about",
                            fluidRow(
                                column(
@@ -174,10 +200,31 @@ server<-function(session, input,output){
    df= read.delim(input$file1$datapath, header=T, sep=input$sep, na.strings="")
    tmp=NULL
    tmp=grep("date_prel", colnames(df))
+   if (length(tmp)>0) {df[,tmp]=as.Date(df[,tmp], "%m/%d/%Y")}
+
+   tmp=NULL
+   tmp=grep("virus", colnames(df))
+   if (length(tmp)==0) {virus="sars_cov_2";df=cbind(df, as.character(virus)); colnames(df)[ncol(df)]="virus"}
+   
+   tmp=NULL
+   tmp=grep("clade", colnames(df))
+   if (length(tmp)==0) {clade=NA; df=cbind(df, as.character(clade)); colnames(df)[ncol(df)]="clade"}
+   
+   tmp=NULL
+   tmp=grep("pangolin_lineage", colnames(df))
+   if (length(tmp)==0) {pangolin_lineage=NA; df=cbind(df, as.character(pangolin_lineage)); colnames(df)[ncol(df)]="pangolin_lineage"}
+   
+   tmp=NULL
+   tmp=grep("UH", colnames(df))
+   if (length(tmp)==0) {UH=NA; df=cbind(df,as.character(UH)); colnames(df)[ncol(df)]="UH"}
+  
+   tmp=NULL
+   tmp=grep("nb_labo", colnames(df))
+   if (length(tmp)==0) {nb_labo=NA; df=cbind(df,as.character(nb_labo)); colnames(df)[ncol(df)]="nb_labo"}
+   print(head(tmp))
+   print(head(df))
    #print(str(df))
-   if(tmp) {df[,tmp]=as.Date(df[,tmp], "%m/%d/%Y")
-   #print(str(df))
-   }
+   
     return(df)
 }
 
@@ -185,13 +232,12 @@ server<-function(session, input,output){
 
 observe({
   updateSelectInput(session,"series",choices=c(colnames(data1())[-1],"Check variants"))
+  updatePickerInput(session,"subset_CoV",choices=c(colnames(data1())[-1]), selected="virus")
+  updateSelectInput(session,"Lab",choices=c(colnames(data1())), selected="")
+  updateSelectInput(session,"Suffix",choices=c(colnames(data1())), selected="name")
+  updateSelectInput(session,"Status",choices=c(colnames(data1())), selected="")
+  updateSelectInput(session,"Address",choices=c(colnames(data1())), selected="")
   })
-
-observe({
-    updatePickerInput(session,"subset_CoV",choices=c(colnames(data1())[-1]), selected="UH")
-  })
-
-
 
   data3 <- reactive({
     validate(need(input$file2,""))
@@ -200,13 +246,17 @@ observe({
       return(NULL)
     } else {
     ext <- tools::file_ext(input$file2$datapath)
-    validate(need(ext == "newick", "Please upload a newick file"))
+    validate(need(ext %in% c("newick", "nw"), "Please upload a newick file"))
     tree=treeio::read.newick(input$file2$datapath)
     return(tree)}
   })
 
   my_Idwithvariant<- reactive({
     input$Idwithvariant
+  })
+  
+  my_submission<- reactive({
+    input$submit
   })
 
    my_series <- reactive({
@@ -246,50 +296,86 @@ observe({
    my_submit_dta <- reactiveVal()
    gg.tree= reactiveVal()
 
-
+ ## format GISAID submission table
+   my_Submitter <- reactive({  input$Submitter })
+   my_Location <- reactive({  input$Location })
+   my_SubLab<- reactive({  input$SubLab })
+   my_SubAddress<- reactive({  input$SubAddress })
+   my_Authors<- reactive({  input$Authors })
+   my_Type<- reactive({  input$Type })
+   my_Host<- reactive({  input$Host })
+   my_Fasta<- reactive({  input$Fasta })
+   my_Lab<- reactive({  input$Lab })
+   my_Address<- reactive({  input$Address })
+   my_Prefix<- reactive({  input$Prefix })
+   my_Suffix<- reactive({  input$Suffix })
+   my_Status<- reactive({  input$Status })
+   my_Passage<- reactive({  input$Passage })
+   my_Seq<- reactive({  input$Seq })
+   my_Assembly<- reactive({  input$Assembly })
+   my_Coverage<- reactive({  input$Coverage })
+   
+   
    observe({
-      tp=data1() %>%
-       select(name, sexe,date_prel,DDN,UH, nb_labo) %>%
-       filter(name!="MN908947.3") %>%
-       filter(!grepl("control|Control", nb_labo)) %>%
-       mutate(givendate=year(as.Date(date_prel, "%m/%d/%Y"))) %>%
-       mutate(DDN=year(as.Date(as.character(DDN),format="%Y")))%>%
-       mutate('Patient age' = givendate - DDN) %>%
-       mutate(UH=ifelse(is.na(UH), "HEGP - Laboratoire de Virologie", UH)) %>%
-       mutate(Submitter="david.veyer",
-              'FASTA filename'="IDF-APHP-HEGP.fasta",
-              'Virus name'=paste0("hCoV-19/France/IDF-APHP-HEGP-",name),
-              Type= "betacoronavirus",
-              'Passage details/history'="Original",
-              Location="Europe / France / Ile-de-France / Paris",
-              Host="Human",
-              sexe=gsub("F","Female", gsub("M", "Male", sexe)),
-              'Patient status'="Hospitalized",
-              'Sequencing technology'="Illumina Miseq",
-              'Assembly method'= "Geneious Prime 2021.0.3",
-              'Originating lab'=ifelse(UH=="BROUSSAIS", "Broussais", "HEGP - Laboratoire de Virologie"),
-              Address="Hopital Européen Georges Pompidou (HEGP), 20 rue Leblanc, 75015 Paris",
-              'Submitting lab'="HEGP - Laboratoire de Virologie",
-              ) %>%
+     if(my_submission() == "yes") {
+       if (my_submission()!='') {t1=NULL; t1=grep(my_Suffix(), colnames(data1()));suffix.data=data1()[,t1]}
+       if (my_submission()=='') {suffix.data=NA}
+       
+       if (my_Status()!='') {t2=NULL; t2=grep(my_Status(), colnames(data1())); status.data=data1()[,t2]}
+       if (my_Status()=='') {status.data=NA}
+     
+       if (my_Lab()!='') {t3=NULL; t3=grep(my_Lab(), colnames(data1()));lab.data=data1()[,t3]}
+       if (my_Lab()=='') {lab.data=NA}
+       
+       if (my_Address()!='') {t4=NULL;  t4=grep(my_Address(), colnames(data1())); address.data=data1()[,t4]}
+       if (my_Address()=='') {address.data=NA}
+       gisaid_table=cbind(data1(), suffix.data, status.data, lab.data, address.data)
+       print(head(gisaid_table))
+     
+       tp=gisaid_table %>%
+       select(name, sexe,date_prel,DDN,suffix.data, status.data, lab.data, address.data)  %>%
+      #  # filter(name!="MN908947.3") %>%
+      #  # filter(!grepl("control|Control", nb_labo)) %>%
+      mutate(givendate=year(as.Date(date_prel, "%m/%d/%Y"))) %>%
+      mutate(DDN=year(as.Date(as.character(DDN),format="%Y")))%>%
+      mutate('Patient age' = givendate - DDN) %>%
+      #  # mutate(UH=ifelse(is.na(UH), "HEGP - Laboratoire de Virologie", UH)) %>%
+      mutate(prefix.data=my_Prefix())  %>%
+      mutate(Submitter=my_Submitter(),
+               'FASTA filename'=my_Fasta(),
+               'Virus name'=paste0(prefix.data,"/",suffix.data),
+                Type= my_Type(),
+               'Passage details/history'=my_Passage(),
+                Location=my_Location(),
+                Host=my_Host(),
+                sexe=gsub("F","Female", gsub("M", "Male", sexe)),
+               'Patient status'=status.data,
+               'Sequencing technology'=my_Seq(),
+               'Assembly method'= my_Assembly(),
+               'Originating lab'=lab.data,
+               Address=address.data,
+               '(Submitting)Address'=my_SubAddress(),
+               'Submitting lab'=my_SubLab(),
+               Coverage=my_Coverage(),
+               Authors=my_Authors()
+               ) %>%
             mutate('Additional location information'=NA, 'Additional host information'=NA, 'Sampling Strategy'=NA,
-               'Specimen source'=NA, 'Outbreak'=NA,'Last vaccinated'=NA,Treatment=NA,Coverage=NA,
+               'Specimen source'=NA, 'Outbreak'=NA,'Last vaccinated'=NA,'Treatment'=NA,
                'Sample ID given by the originating laboratory'=NA,'Sample ID given by the submitting laboratory'=NA,
-               Authors=NA, Comment=NA,"Comment Icon"=NA) %>%
+               'Comment'=NA,"Comment Icon"=NA) %>%
        mutate(sexe=ifelse(is.na(sexe), "unknown", sexe)) %>%
        rename('Collection date'=date_prel, Gender=sexe)
-
-
-
-      tp=tp[,c("name","nb_labo","Submitter","FASTA filename","Virus name","Type","Passage details/history",
+       
+       tp=tp[,c("name","Submitter","FASTA filename","Virus name","Type","Passage details/history",
       "Collection date","Location","Additional location information", "Host", "Additional host information",
       "Sampling Strategy", "Gender","Patient age","Patient status",
       "Specimen source", "Outbreak","Last vaccinated", "Treatment","Sequencing technology","Assembly method",
       "Coverage","Originating lab","Address","Sample ID given by the originating laboratory","Submitting lab",
-      "Address","Sample ID given by the submitting laboratory","Authors","Comment","Comment Icon")]
+      "(Submitting)Address","Sample ID given by the submitting laboratory","Authors","Comment","Comment Icon")]
 
       my_submit_dta(tp)
 
-     })
+     }})
 
 
 
@@ -328,7 +414,7 @@ observe({
         dplyr::mutate(AA.pos = parseProteinChange(Value, Variant_Classification)) %>%
         arrange(Domain, AA.pos) %>%
         dplyr::rename(Variant=Value) %>%
-        select(name,code,virus,clade,pangolin_lineage,Domain,Variant,AA.pos) %>%
+        select(name,nb_labo,virus,clade,pangolin_lineage,Domain,Variant,AA.pos) %>%
         as.data.frame()
 
       # var.tab2=data1() %>% separate_rows(aaDeletions, sep=",") %>%
@@ -493,11 +579,12 @@ observe({output$p.clades <- renderPlot({
                                                       "#6699CC" = "20A",
                                                       "#661100" = "20A.EU2",
                                                       "#882255" = "20B",
+                                                      "#CC503E" = "20C",
                                                       "#999933" = "20D",
                                                       "#44AA99" = "20E (EU1)",
                                                       "#332288" = "20H/501Y.V2",
                                                       "#117733" = "20I/501Y.V1",
-                                                      "#DDCC77" = "20J.501Y.V3"),
+                                                      "#DDCC77" = "20J/501Y.V3"),
                   color_label = fct_relevel(color_label)) %>%
     arrange(color_label) %>%
     #dplyr::mutate(clade = fct_inorder(clade)) %>%
@@ -568,7 +655,7 @@ observe({output$p.dist.clades <- renderPlotly({
    ## distribution of clades
  if (is.null(my_subset_CoV())) {
   clade_all = data1()%>%
-      filter(name!="MN908947.3" & nb_labo!="control_neg" & nb_labo!="control_pos"	& nb_labo!="Control_pos")  %>%
+      #filter(!(name=="MN908947.3" |  nb_labo=="control_neg" | nb_labo=="control_pos"	| nb_labo=="Control_pos"))  %>%
         select(name, clade) %>%
         group_by(clade) %>%
         summarise(cases = n()) %>%
@@ -579,7 +666,7 @@ observe({output$p.dist.clades <- renderPlotly({
   if (!is.null(my_subset_CoV())) {
 
   clade_all = data1()%>%
-    filter(name!="MN908947.3" & nb_labo!="control_neg" & nb_labo!="control_pos"	& nb_labo!="Control_pos")  %>%
+    #filter(name!="MN908947.3" & nb_labo!="control_neg" & nb_labo!="control_pos"	& nb_labo!="Control_pos")  %>%
     select(name, my_subset_CoV()) %>%
     rename(labels = 2) %>%
     group_by(labels) %>%
@@ -612,7 +699,7 @@ observe({output$p.dist.other <- renderPlotly({
 
   if (!is.null(my_subset_CoV())) {
     ALL = data1()%>%
-      filter(name!="MN908947.3" & nb_labo!="control_neg" & nb_labo!="control_pos"	& nb_labo!="Control_pos")  %>%
+      #filter(name!="MN908947.3" & nb_labo!="control_neg" & nb_labo!="control_pos"	& nb_labo!="Control_pos")  %>%
       select(name, my_subset_CoV(), clade) %>%
       rename(labels = 2) %>%
       filter(!is.na(labels) & labels!="") %>%
@@ -672,6 +759,16 @@ p1 = p1 %>%
                      textinfo="label+value+percent parent"
   )
 p1 = p1 %>%
+  plotly::add_trace( data = ALL %>% dplyr::filter(clade == "20C"),
+                     type= "treemap",
+                     values = ~cases,
+                     labels= ~ labels,
+                     parents=  ~clade,
+                     domain = list(column=4),
+                     name = "Active",
+                     textinfo="label+value+percent parent"
+  )
+p1 = p1 %>%
   plotly::add_trace(data = ALL %>% dplyr::filter(clade == "20D"),
                     type= "treemap",
                     values = ~cases,
@@ -681,7 +778,6 @@ p1 = p1 %>%
                     name = "Active",
                     textinfo="label+value+percent parent"
   )
-
 p1 = p1 %>%
   plotly::add_trace( data = ALL %>% dplyr::filter(clade == "20E (EU1)"),
                      type= "treemap",
