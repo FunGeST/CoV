@@ -1,0 +1,98 @@
+## Installation notebook on an Ubuntu 18.04.5
+shiny app web server (https://shiny.rstudio.com/) to publish CoV.
+
+Prerequisites
+The following software must be available on the system before continuing:
+
+    Python 3.6+
+    cmake
+    gcc (gcc 4.8 or newer is required)
+    g++ (g++ 4.8 or newer is required)
+    git
+    R-base-devel - Many distributions provide two packages when distributing R: one for base R and one "devel" package which is helpful in building extra packages, among other things. In addition to base R, Shiny Server requires many of the components typically included in the "devel" packages, such as libpng and libjpg. If you're on a platform that doesn't have such a "devel" package, be sure to include these components when installing R.
+
+Then tuto at: https://github.com/rstudio/shiny-server/wiki/Building-Shiny-Server-from-Source
+
+## Installation
+
+#Install miniconda => python 3+ et prerequisite
+bash Miniconda2-latest-Linux-x86_64.sh
+conda install R
+conda activate py3
+conda install cmake
+conda install -c r r-base
+PATH="/home/<user>/miniconda2/bin:$PATH" #to add R3.6+ in PATH (miniconda2 installation)
+
+# Clone the repository from GitHub
+git clone https://github.com/rstudio/shiny-server.git
+
+# Get into a temporary directory in which we'll build the project
+cd shiny-server
+mkdir tmp
+cd tmp
+
+# Install our private copy of Node.js
+../external/node/install-node.sh
+
+# Add the bin directory to the path so we can reference node
+DIR=`pwd`
+PATH=$DIR/../bin:$PATH
+
+# Use cmake to prepare the make step. Modify the "--DCMAKE_INSTALL_PREFIX"
+# if you wish the install the software at a different location.
+cmake -DCMAKE_INSTALL_PREFIX=/usr/local ../
+# Get an error here? Check the "How do I set the cmake Python version?" question below
+
+# Recompile the npm modules included in the project
+make
+mkdir ../build
+(cd .. && ./bin/npm install)
+(cd .. && ./bin/node ./ext/node/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js rebuild)
+
+# Install the software at the predefined location
+sudo make install
+
+# Install default config file
+sudo mkdir -p /etc/shiny-server
+sudo cp ../config/default.config /etc/shiny-server/shiny-server.conf
+
+
+Post-installation
+# Place a shortcut to the shiny-server executable in /usr/bin
+sudo ln -s /usr/local/shiny-server/bin/shiny-server /usr/bin/shiny-server
+
+# Create shiny user. On some systems, you may need to specify the full path to 'useradd'
+sudo useradd -r -m shiny ## Création du user shiny
+
+# Create log, config, and application directories
+sudo mkdir -p /var/log/shiny-server
+sudo mkdir -p /srv/shiny-server
+sudo mkdir -p /var/lib/shiny-server
+sudo chown shiny /var/log/shiny-server
+sudo mkdir -p /etc/shiny-server
+
+# Then install all necessary R packages
+ex1: 
+sudo su - -c "R -e \"install.packages('shiny', repos='https://cran.rstudio.com/')\""
+
+ex:2 Or open R et manually install libraries
+R
+install.packages("shinyWidgets")
+install.packages("shinyjs")
+install.packages("glue")
+install.packages("dplyr")
+install.packages("plyr")
+install.packages("seqinr")
+install.packages("readxl", repos = "http://cran.us.r-project.org")
+install.packages("g3viz", repos = "http://cran.us.r-project.org")
+install.packages("DT")
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+install.packages("ggplot2")
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("maftools")
+
+## publication of developed shiny applications
+sudo cp -R /usr/local/lib/R/site-library/shiny/examples /srv/shiny-server/
+sudo cp -R /home/<user>/Shiny/<app-1> /srv/shiny-server/<app-1>
