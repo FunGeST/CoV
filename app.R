@@ -106,6 +106,8 @@ titlePanel("COVID datasets"),
                            tags$hr(),
                            plotlyOutput("p.dist.clades"),
                            plotlyOutput("p.dist.other"),
+                           plotlyOutput("p.dist.other2"),
+                           plotlyOutput("p.dist.other3"),
                            ),
                   tabPanel("tree plot",
                            fluidRow(
@@ -203,6 +205,10 @@ server<-function(session, input,output){
    if (length(tmp)>0) {df[,tmp]=as.Date(df[,tmp], "%m/%d/%Y")}
 
    tmp=NULL
+   tmp=grep("sexe", colnames(df))
+   if (length(tmp)>0) {colnames(df)[tmp]="gender"}
+   
+   tmp=NULL
    tmp=grep("virus", colnames(df))
    if (length(tmp)==0) {virus="sars_cov_2";df=cbind(df, as.character(virus)); colnames(df)[ncol(df)]="virus"}
    
@@ -225,7 +231,8 @@ server<-function(session, input,output){
    print(head(df))
    #print(str(df))
    
-    return(df)
+   return(df)
+
 }
 
   })
@@ -333,7 +340,7 @@ observe({
        print(head(gisaid_table))
      
        tp=gisaid_table %>%
-       select(name, sexe,date_prel,DDN,suffix.data, status.data, lab.data, address.data)  %>%
+       select(name, gender,date_prel,DDN,suffix.data, status.data, lab.data, address.data)  %>%
       #  # filter(name!="MN908947.3") %>%
       #  # filter(!grepl("control|Control", nb_labo)) %>%
       mutate(givendate=year(as.Date(date_prel, "%m/%d/%Y"))) %>%
@@ -348,7 +355,7 @@ observe({
                'Passage details/history'=my_Passage(),
                 Location=my_Location(),
                 Host=my_Host(),
-                sexe=gsub("F","Female", gsub("M", "Male", sexe)),
+                gender=gsub("F","Female", gsub("M", "Male", gender)),
                'Patient status'=status.data,
                'Sequencing technology'=my_Seq(),
                'Assembly method'= my_Assembly(),
@@ -363,8 +370,8 @@ observe({
                'Specimen source'=NA, 'Outbreak'=NA,'Last vaccinated'=NA,'Treatment'=NA,
                'Sample ID given by the originating laboratory'=NA,'Sample ID given by the submitting laboratory'=NA,
                'Comment'=NA,"Comment Icon"=NA) %>%
-       mutate(sexe=ifelse(is.na(sexe), "unknown", sexe)) %>%
-       rename('Collection date'=date_prel, Gender=sexe)
+       mutate(gender=ifelse(is.na(gender), "unknown", gender)) %>%
+       rename('Collection date'=date_prel, Gender=gender)
        
        tp=tp[,c("name","Submitter","FASTA filename","Virus name","Type","Passage details/history",
       "Collection date","Location","Additional location information", "Host", "Additional host information",
@@ -574,18 +581,29 @@ observe({output$p.clades <- renderPlot({
 
   annot3 = annot2 %>%
     dplyr::mutate(color_label = forcats::fct_collapse(clade,
-                                                      "#D63D32" = "19A",
-                                                      "#888888" = "19B",
+                                                      "black" = "19A",
+                                                      "black" = "19B",
                                                       "#6699CC" = "20A",
                                                       "#661100" = "20A.EU2",
                                                       "#882255" = "20B",
                                                       "#CC503E" = "20C",
                                                       "#999933" = "20D",
                                                       "#44AA99" = "20E (EU1)",
+                                                      "#CC503E" = "20F",
+                                                      "#1D6996" = "20G",
                                                       "#332288" = "20H/501Y.V2",
+                                                      "#332288" = "20H (Beta, V2)",
                                                       "#117733" = "20I/501Y.V1",
-                                                      "#DDCC77" = "20J/501Y.V3"),
-                  color_label = fct_relevel(color_label)) %>%
+                                                      "#117733" = "20I (Alpha, V1)",
+                                                      "#DDCC77" = "20J/501Y.V3",
+                                                      "#DDCC77" = "20J (Gamma, V3)",
+                                                      "#855C75" = "21A (Delta)",
+                                                      "#855C75" = "21B (Kappa)",
+                                                      "#855C75" = "21C (Epsilon)",
+                                                      "#855C75" = "21D (Eta)",
+                                                      "#888888" = "21E (Theta)",
+                                                      "#D63D32" = "21F (Iota)", other_level = "grey90"),
+                  color_label = fct_relevel(color_label, "grey90")) %>%
     arrange(color_label) %>%
     #dplyr::mutate(clade = fct_inorder(clade)) %>%
     dplyr::mutate(clade_label = ifelse(color_label == "grey90", "", as.character(clade))) %>%
@@ -623,7 +641,7 @@ observe({output$p.clades <- renderPlot({
                                 mapping = aes(x = date, #days_since_first,
                                               y = cum_cases,
                                               label = clade_label),
-                                hjust=-0.1, vjust = 0, bg.color = "white") +
+                                hjust=+0.5, vjust = 0, bg.color = "white") +
     # customise the theme a bit more
     theme(
       axis.text.x=element_text(angle=60, hjust=1),
@@ -695,7 +713,7 @@ observe({output$p.dist.clades <- renderPlotly({
 }) ## end of plot distribution
 
 
-observe({output$p.dist.other <- renderPlotly({
+observe({output$p.dist.other3 <- renderPlotly({
 
   if (!is.null(my_subset_CoV())) {
     ALL = data1()%>%
@@ -728,8 +746,45 @@ p1 = p1 %>%
                      name = "Active",
                      textinfo="label+value+percent parent"
   )
-p1 = p1 %>%
-  plotly::add_trace( data = ALL %>% dplyr::filter(clade == "20A"),
+p1 = p1 %>%  plotly::layout(grid=list(columns=2, rows=1))
+  }
+  
+})})
+  
+observe({output$p.dist.other2 <- renderPlotly({
+
+  if (!is.null(my_subset_CoV())) {
+    ALL = data1()%>%
+      #filter(name!="MN908947.3" & nb_labo!="control_neg" & nb_labo!="control_pos"	& nb_labo!="Control_pos")  %>%
+      select(name, my_subset_CoV(), clade) %>%
+      rename(labels = 2) %>%
+      filter(!is.na(labels) & labels!="") %>%
+      group_by(labels, clade) %>%
+      summarise(cases = n()) %>%
+      as.data.frame()
+    
+p2 = plotly::plot_ly(
+  data = ALL %>% dplyr::filter(grepl("20A", clade)),
+  type= "treemap",
+  values = ~cases,
+  labels= ~ labels,
+  parents=  ~clade,
+  domain = list(column=0),
+  name = "Confirmed",
+  textinfo="label+value+percent parent"
+)
+p2 = p2 %>%
+  plotly::add_trace( data = ALL %>% dplyr::filter(grepl("20B", clade)),
+                     type= "treemap",
+                     values = ~cases,
+                     labels= ~ labels,
+                     parents=  ~clade,
+                     domain = list(column=1),
+                     name = "Active",
+                     textinfo="label+value+percent parent"
+  )
+p2 = p2 %>%
+  plotly::add_trace( data = ALL %>% dplyr::filter(grepl("20C", clade)),
                      type= "treemap",
                      values = ~cases,
                      labels= ~ labels,
@@ -738,48 +793,38 @@ p1 = p1 %>%
                      name = "Active",
                      textinfo="label+value+percent parent"
   )
-p1 = p1 %>%
-  plotly::add_trace( data = ALL %>% dplyr::filter(clade == "20A.EU2"),
-                     type= "treemap",
-                     values = ~cases,
-                     labels= ~ labels,
-                     parents=  ~clade,
-                     domain = list(column=3),
-                     name = "Active",
-                     textinfo="label+value+percent parent"
-  )
-p1 = p1 %>%
-  plotly::add_trace( data = ALL %>% dplyr::filter(clade == "20B"),
-                     type= "treemap",
-                     values = ~cases,
-                     labels= ~ labels,
-                     parents=  ~clade,
-                     domain = list(column=4),
-                     name = "Active",
-                     textinfo="label+value+percent parent"
-  )
-p1 = p1 %>%
-  plotly::add_trace( data = ALL %>% dplyr::filter(clade == "20C"),
-                     type= "treemap",
-                     values = ~cases,
-                     labels= ~ labels,
-                     parents=  ~clade,
-                     domain = list(column=4),
-                     name = "Active",
-                     textinfo="label+value+percent parent"
-  )
-p1 = p1 %>%
-  plotly::add_trace(data = ALL %>% dplyr::filter(clade == "20D"),
+p2 = p2 %>%
+  plotly::add_trace(data = ALL %>% dplyr::filter(grepl("20D", clade)),
                     type= "treemap",
                     values = ~cases,
                     labels= ~ labels,
                     parents=  ~clade,
-                    domain = list(column=5),
+                    domain = list(column=3),
                     name = "Active",
                     textinfo="label+value+percent parent"
   )
-p1 = p1 %>%
-  plotly::add_trace( data = ALL %>% dplyr::filter(clade == "20E (EU1)"),
+p2 = p2 %>%
+  plotly::add_trace( data = ALL %>% dplyr::filter(grepl("20E", clade)),
+                     type= "treemap",
+                     values = ~cases,
+                     labels= ~ labels,
+                     parents=  ~clade,
+                     domain = list(column=4),
+                     name = "Active",
+                     textinfo="label+value+percent parent"
+  )
+p2 = p2 %>%
+  plotly::add_trace( data = ALL %>% dplyr::filter(grepl("20F", clade)),
+                     type= "treemap",
+                     values = ~cases,
+                     labels= ~ labels,
+                     parents=  ~clade,
+                     domain = list(column=5),
+                     name = "Active",
+                     textinfo="label+value+percent parent"
+  )
+p2 = p2 %>%
+  plotly::add_trace( data = ALL %>% dplyr::filter(grepl("20G", clade)),
                      type= "treemap",
                      values = ~cases,
                      labels= ~ labels,
@@ -788,8 +833,8 @@ p1 = p1 %>%
                      name = "Active",
                      textinfo="label+value+percent parent"
   )
-p1 = p1 %>%
-  plotly::add_trace( data = ALL %>% dplyr::filter(clade == "20H/501Y.V2"),
+p2 = p2 %>%
+  plotly::add_trace( data = ALL %>% dplyr::filter(grepl("20H", clade)),
                      type= "treemap",
                      values = ~cases,
                      labels= ~ labels,
@@ -798,8 +843,8 @@ p1 = p1 %>%
                      name = "Active",
                      textinfo="label+value+percent parent"
   )
-p1 = p1 %>%
-  plotly::add_trace( data = ALL %>% dplyr::filter(clade == "20I/501Y.V1"),
+p2 = p2 %>%
+  plotly::add_trace( data = ALL %>% dplyr::filter(grepl("20I", clade)),
                      type= "treemap",
                      values = ~cases,
                      labels= ~ labels,
@@ -808,8 +853,8 @@ p1 = p1 %>%
                      name = "Active",
                      textinfo="label+value+percent parent"
   )
-p1 = p1 %>%
-  plotly::add_trace( data = ALL %>% dplyr::filter(clade == "20J/501Y.V3"),
+p2 = p2 %>%
+  plotly::add_trace( data = ALL %>% dplyr::filter(grepl("20J", clade)),
                      type= "treemap",
                      values = ~cases,
                      labels= ~ labels,
@@ -818,7 +863,84 @@ p1 = p1 %>%
                      name = "Active",
                      textinfo="label+value+percent parent"
   )
-p1 = p1 %>%  plotly::layout(grid=list(columns=10, rows=1))
+p2 = p2 %>%  plotly::layout(grid=list(columns=10, rows=1))
+}
+})})
+
+
+observe({output$p.dist.other <- renderPlotly({
+  
+if (!is.null(my_subset_CoV())) {
+  ALL = data1()%>%
+    #filter(name!="MN908947.3" & nb_labo!="control_neg" & nb_labo!="control_pos"	& nb_labo!="Control_pos")  %>%
+    select(name, my_subset_CoV(), clade) %>%
+    rename(labels = 2) %>%
+    filter(!is.na(labels) & labels!="") %>%
+    group_by(labels, clade) %>%
+    summarise(cases = n()) %>%
+    as.data.frame()
+  
+p3 = plotly::plot_ly(
+  data = ALL %>% dplyr::filter(grepl("21A", clade)),
+  type= "treemap",
+  values = ~cases,
+  labels= ~ labels,
+  parents=  ~clade,
+  domain = list(column=0),
+  name = "Confirmed",
+  textinfo="label+value+percent parent"
+)
+p3 = p3 %>%
+  plotly::add_trace( data = ALL %>% dplyr::filter(grepl("21B", clade)),
+                     type= "treemap",
+                     values = ~cases,
+                     labels= ~ labels,
+                     parents=  ~clade,
+                     domain = list(column=1),
+                     name = "Active",
+                     textinfo="label+value+percent parent"
+  )
+p3 = p3 %>%
+  plotly::add_trace( data = ALL %>% dplyr::filter(grepl("21C", clade)),
+                     type= "treemap",
+                     values = ~cases,
+                     labels= ~ labels,
+                     parents=  ~clade,
+                     domain = list(column=2),
+                     name = "Active",
+                     textinfo="label+value+percent parent"
+  )
+p3 = p3 %>%
+  plotly::add_trace( data = ALL %>% dplyr::filter(grepl("21D", clade)),
+                     type= "treemap",
+                     values = ~cases,
+                     labels= ~ labels,
+                     parents=  ~clade,
+                     domain = list(column=3),
+                     name = "Active",
+                     textinfo="label+value+percent parent"
+  )
+p3 = p3 %>%
+  plotly::add_trace( data = ALL %>% dplyr::filter(grepl("21E", clade)),
+                     type= "treemap",
+                     values = ~cases,
+                     labels= ~ labels,
+                     parents=  ~clade,
+                     domain = list(column=4),
+                     name = "Active",
+                     textinfo="label+value+percent parent"
+  )
+p3 = p3 %>%
+  plotly::add_trace( data = ALL %>% dplyr::filter(grepl("21F", clade)),
+                     type= "treemap",
+                     values = ~cases,
+                     labels= ~ labels,
+                     parents=  ~clade,
+                     domain = list(column=5),
+                     name = "Active",
+                     textinfo="label+value+percent parent"
+  )
+p3 = p3 %>%  plotly::layout(grid=list(columns=6, rows=1))
 }
 
 })
